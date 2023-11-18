@@ -1,5 +1,6 @@
 {
   "do_train": true,
+  "model_name": "chatglm3-6b",
   "model_name_or_path": "THUDM/chatglm3-6b",
   "train_file": "./AdvertiseGen/train.json",
   "validation_file": "./AdvertiseGen/dev.json",
@@ -22,5 +23,6 @@
   "predict_with_generate": true,
   "save_total_limit": 1,
   "lora_rank": 8,
-  "lora": true
+  "lora": true,
+  "lora_target_modules": "query_key_value"
 }

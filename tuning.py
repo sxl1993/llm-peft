@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# coding=utf-8
+# -*- coding: utf-8 -*-
 
 import warnings
 import torch
@@ -8,6 +8,7 @@ from peft import PeftType
 from peft.config import PeftConfig 
 from peft.peft_model import PeftModel
 from peft.utils.other import _get_batch_size
+from peft import LoraConfig, PrefixTuningConfig, TaskType, get_peft_model
 
 class PeftModelForChatGLM(PeftModel):
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
@@ -131,3 +132,38 @@ class PeftModelForChatGLM(PeftModel):
             prompts = prompts.to(inputs_embeds.dtype)
             inputs_embeds = torch.cat((prompts, inputs_embeds), dim=1)
             return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
+        
+
+def get_prefix_tuning2_model(model, model_name, pre_seq_len, token_dim, num_attention_heads):
+    if model_name == "chatglm2-6b":
+        config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM,
+                                    num_virtual_tokens=pre_seq_len,
+                                    token_dim=token_dim,
+                                    num_attention_heads=num_attention_heads,
+                                    inference_mode=False
+                )
+        model = PeftModelForChatGLM(model, config)
+    
+    return model
+    
+def get_lora_model(model, model_name, target_modules, lora_rank, lora_dropout):
+    target_modules = target_modules.split(",")
+    config = LoraConfig(task_type=TaskType.CAUSAL_LM,
+                        lora_alpha=2 * lora_rank,
+                        target_modules=target_modules,
+                        inference_mode=False,
+                        r=lora_rank,
+                        lora_dropout=lora_dropout,
+            )
+    if model_name == "chatglm2-6b":
+        model = PeftModelForChatGLM(model, config)
+    
+    model = get_peft_model(model, config)
+    return model
+
+
+if __name__ == "__main__":
+    modules = "query_key_value"
+    
+    print(modules.split(","))
+    

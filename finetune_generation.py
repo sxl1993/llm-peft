@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
 # Copyright 2021 The HuggingFace Team. All rights reserved.
 #
@@ -29,15 +29,15 @@ from datasets import load_dataset
 from transformers import (
     AutoConfig,
     AutoModel,
+    AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorForSeq2Seq,
     HfArgumentParser,
     Seq2SeqTrainingArguments,
     set_seed,
 )
-from peft import get_peft_model, LoraConfig, PrefixTuningConfig, TaskType
 from metric import compute_metrics
-from tuning import PeftModelForChatGLM
+from tuning import get_prefix_tuning2_model, get_lora_model
 from trainer_seq2seq import Seq2SeqTrainer
 from arguments import ModelArguments, DataTrainingArguments
 from data import InputOutputTrainDataset, InputOutputEvalDataset, print_dataset_example
@@ -118,35 +118,32 @@ def main():
                 new_prefix_state_dict[k[len("transformer.prefix_encoder."):]] = v
         model.transformer.prefix_encoder.load_state_dict(new_prefix_state_dict)
     else:
-        model = AutoModel.from_pretrained(model_args.model_name_or_path, config=config, trust_remote_code=True)
-
+        # model = AutoModel.from_pretrained(model_args.model_name_or_path, config=config, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path, config=config, trust_remote_code=True)
     if model_args.quantization_bit is not None:
         print(f"Quantized to {model_args.quantization_bit} bit")
         model = model.quantize(model_args.quantization_bit)
     if model_args.pre_seq_len is not None:
         # P-tuning v2
-        ptuning_config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM,
-                                            num_virtual_tokens=model_args.pre_seq_len,
-                                            token_dim=256,
-                                            num_attention_heads=2,
-                                            inference_mode=False
-                        )
-        model = PeftModelForChatGLM(model, ptuning_config)
+        model = get_prefix_tuning2_model(model,
+                                         model_args.model_name, 
+                                         model_args.pre_seq_len,
+                                         model_args.prefix_token_dim,
+                                         model_args.prefix_num_attention_heads
+                )
         model.print_trainable_parameters()
     elif model_args.lora:
         # lora
-        peft_config = LoraConfig(
-            task_type="CAUSAL_LM",
-            lora_alpha=2 * model_args.lora_rank,
-            target_modules=["query_key_value"],
-            inference_mode=False,
-            r=model_args.lora_rank,
-            lora_dropout=model_args.lora_dropout,
-        )
-        model = get_peft_model(model, peft_config)
+        model = get_lora_model(model,
+                               model_args.model_name,
+                               model_args.lora_target_modules,
+                               model_args.lora_rank,
+                               model_args.lora_dropout
+                )
         model = model.float()
         model.print_trainable_parameters()
     else:
+        # Finetune
         model = model.float()
 
     if training_args.do_train:
@@ -162,7 +159,7 @@ def main():
                                                     data_args.max_source_length,
                                                     data_args.max_target_length
                             )
-        print_dataset_example(train_dataset[0], tokenizer)
+        # print_dataset_example(train_dataset[0], tokenizer)
         
     if training_args.do_eval:
         if "validation" not in raw_datasets:
@@ -176,7 +173,7 @@ def main():
                                                   data_args.max_source_length,
                                                   data_args.val_max_target_length
                             )
-        print_dataset_example(eval_dataset[0], tokenizer)
+        # print_dataset_example(eval_dataset[0], tokenizer)
 
     if training_args.do_predict:
         if "test" not in raw_datasets:
@@ -190,7 +187,7 @@ def main():
                                                      data_args.max_source_length,
                                                      data_args.val_max_target_length
                             )
-        print_dataset_example(predict_dataset[0], tokenizer)
+        # print_dataset_example(predict_dataset[0], tokenizer)
 
     # Data collator
     label_pad_token_id = -100 if data_args.ignore_pad_token_for_loss else tokenizer.pad_token_id

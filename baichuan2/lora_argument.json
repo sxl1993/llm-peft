@@ -1,17 +1,17 @@
 {
   "do_train": true,
-  "model_name": "chatglm2-6b",
-  "model_name_or_path": "THUDM/chatglm2-6b",
+  "model_name": "baichuan2-7b",
+  "model_name_or_path": "baichuan-inc/Baichuan2-7B-Base",
   "train_file": "./AdvertiseGen/train.json",
   "validation_file": "./AdvertiseGen/dev.json",
-  "output_dir": "./checkpoints/chatglm2_lora_ckpts",
+  "output_dir": "./checkpoints/baichaun2_lora_ckpts",
   "overwrite_cache": true,
   "overwrite_output_dir": true,
   "preprocessing_num_workers": 10,
   "per_device_train_batch_size": 1,
   "per_device_eval_batch_size": 1,
   "gradient_accumulation_steps": 16,
-  "learning_rate": 5e-3,
+  "learning_rate": 2e-5,
   "warmup_steps": 30,
   "logging_steps": 1,
   "max_steps": 100,
@@ -24,5 +24,5 @@
   "save_total_limit": 1,
   "lora_rank": 8,
   "lora": true,
-  "lora_target_modules": "query_key_value"
+  "lora_target_modules": "W_pack"
 }

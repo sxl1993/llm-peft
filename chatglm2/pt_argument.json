@@ -1,5 +1,6 @@
 {
   "do_train": true,
+  "model_name": "chatglm2-6b",
   "model_name_or_path": "THUDM/chatglm2-6b",
   "train_file": "./AdvertiseGen/train.json",
   "validation_file": "./AdvertiseGen/dev.json",
@@ -19,5 +20,7 @@
   "fp16_opt_level": "O2",
   "predict_with_generate": true,
   "save_total_limit": 1,
-  "pre_seq_len": 128
+  "pre_seq_len": 128,
+  "prefix_token_dim": 256,
+  "prefix_num_attention_heads": 2
 }

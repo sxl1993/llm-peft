@@ -7,7 +7,9 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
+    model_name: str = field(
+        metadata={"help": "model name"}
+    )
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -59,6 +61,12 @@ class ModelArguments:
     prefix_projection: bool = field(
         default=False
     )
+    prefix_token_dim: Optional[int] = field(
+        default=256
+    )
+    prefix_num_attention_heads: Optional[int] = field(
+        default=2
+    )
     lora: Optional[bool] = field(
         default=False, metadata={"help": "Whether to use LoRA technique"}
     )
@@ -71,7 +79,9 @@ class ModelArguments:
     lora_dropout: float = field(
         default=0.1, metadata={"help": "Lora dropout"}
     )
-
+    lora_target_modules: str = field(
+        default="query_key_value", metadata={"help": "Lora target_modules"}
+    )
 
 @dataclass
 class DataTrainingArguments:
