@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import copy
 import warnings
 import torch
 from typing import Optional
 from peft import PeftType
 from peft.config import PeftConfig 
-from peft.peft_model import PeftModel
+from peft.peft_model import PeftModel, PeftModelForCausalLM
 from peft.utils.other import _get_batch_size
 from peft import LoraConfig, PrefixTuningConfig, TaskType, get_peft_model
 
-class PeftModelForChatGLM(PeftModel):
+class PeftModelForChatGLM(PeftModelForCausalLM):
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__(model, peft_config, adapter_name)
 
@@ -132,6 +133,41 @@ class PeftModelForChatGLM(PeftModel):
             prompts = prompts.to(inputs_embeds.dtype)
             inputs_embeds = torch.cat((prompts, inputs_embeds), dim=1)
             return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
+        
+    def prepare_inputs_for_generation(self, *args, task_ids: torch.Tensor = None, **kwargs):
+        peft_config = self.active_peft_config
+        model_kwargs = self.base_model_prepare_inputs_for_generation(*args, **kwargs)
+        if peft_config.is_prompt_learning:
+            # if model_kwargs.get("attention_mask", None) is not None:
+            #     prefix_attention_mask = torch.ones(
+            #         model_kwargs["input_ids"].shape[0], peft_config.num_virtual_tokens
+            #     ).to(model_kwargs["input_ids"].device)
+            #     model_kwargs["attention_mask"] = torch.cat(
+            #         (prefix_attention_mask, model_kwargs["attention_mask"]), dim=1
+            #     )
+
+            if model_kwargs.get("position_ids", None) is not None:
+                warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
+                model_kwargs["position_ids"] = None
+
+            if kwargs.get("token_type_ids", None) is not None:
+                warnings.warn(
+                    "Token type ids are not supported for parameter efficient tuning. Ignoring token type ids"
+                )
+                kwargs["token_type_ids"] = None
+
+            if model_kwargs["past_key_values"] is None and peft_config.peft_type == PeftType.PREFIX_TUNING:
+                past_key_values = self.get_prompt(batch_size=model_kwargs["input_ids"].shape[0])
+                model_kwargs["past_key_values"] = past_key_values
+            else:
+                if model_kwargs["past_key_values"] is None:
+                    inputs_embeds = self.word_embeddings(model_kwargs["input_ids"])
+                    prompts = self.get_prompt(batch_size=model_kwargs["input_ids"].shape[0], task_ids=task_ids)
+                    prompts = prompts.to(inputs_embeds.dtype)
+                    model_kwargs["inputs_embeds"] = torch.cat((prompts, inputs_embeds), dim=1)
+                    model_kwargs["input_ids"] = None
+
+        return model_kwargs
         
 
 def get_prefix_tuning2_model(model, model_name, pre_seq_len, token_dim, num_attention_heads):

@@ -201,6 +201,7 @@ class Seq2SeqTrainer(PrefixTrainer):
             generation_inputs = inputs[self.model.main_input_name]
 
         gen_kwargs["input_ids"] = generation_inputs
+        # breakpoint()
         generated_tokens = self.model.generate(**gen_kwargs)
         generated_tokens = generated_tokens[:, generation_inputs.size()[-1]:]
 

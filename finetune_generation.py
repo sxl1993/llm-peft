@@ -96,8 +96,7 @@ def main():
     raw_datasets = load_dataset(
         extension,
         data_files=data_files,
-        cache_dir=model_args.cache_dir,
-        use_auth_token=True if model_args.use_auth_token else None,
+        cache_dir=model_args.cache_dir
     )
 
     # Load pretrained model and tokenizer
@@ -156,6 +155,7 @@ def main():
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = InputOutputTrainDataset(train_dataset,
                                                     tokenizer,
+                                                    data_args.preprocessing_num_workers,
                                                     data_args.max_source_length,
                                                     data_args.max_target_length
                             )
@@ -164,12 +164,14 @@ def main():
     if training_args.do_eval:
         if "validation" not in raw_datasets:
             raise ValueError("--do_eval requires a validation dataset")
+        eval_dataset = raw_datasets["validation"]
         if data_args.max_eval_samples is not None:
             max_eval_samples = min(len(eval_dataset), data_args.max_eval_samples)
             eval_dataset = eval_dataset.select(range(max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = InputOutputEvalDataset(eval_dataset,
                                                   tokenizer,
+                                                  data_args.preprocessing_num_workers,
                                                   data_args.max_source_length,
                                                   data_args.val_max_target_length
                             )
@@ -178,12 +180,14 @@ def main():
     if training_args.do_predict:
         if "test" not in raw_datasets:
             raise ValueError("--do_predict requires a test dataset")
+        predict_dataset = raw_datasets["test"]
         if data_args.max_predict_samples is not None:
             max_predict_samples = min(len(predict_dataset), data_args.max_predict_samples)
             predict_dataset = predict_dataset.select(range(max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = InputOutputEvalDataset(predict_dataset,
                                                      tokenizer,
+                                                     data_args.preprocessing_num_workers,
                                                      data_args.max_source_length,
                                                      data_args.val_max_target_length
                             )
