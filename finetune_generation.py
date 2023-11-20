@@ -40,7 +40,9 @@ from metric import compute_metrics
 from tuning import get_prefix_tuning2_model, get_lora_model
 from trainer_seq2seq import Seq2SeqTrainer
 from arguments import ModelArguments, DataTrainingArguments
-from data import InputOutputTrainDataset, InputOutputEvalDataset, print_dataset_example
+from dataset import InputOutputTrainDataset, InputOutputEvalDataset, print_dataset_example
+from data import preprocess_dataset_with_model
+
 
 logger = logging.getLogger(__name__)
 
@@ -129,17 +131,13 @@ def main():
                                          model_args.pre_seq_len,
                                          model_args.prefix_token_dim,
                                          model_args.prefix_num_attention_heads)
-      
-        model.print_trainable_parameters()
     elif model_args.lora:
         # lora
         model = get_lora_model(model,
                                model_args.model_name,
                                model_args.lora_target_modules,
                                model_args.lora_rank,
-                               model_args.lora_dropout
-                )
-        model.print_trainable_parameters()
+                               model_args.lora_dropout)
     else:
         # Finetune
         model = model.float()
@@ -152,12 +150,15 @@ def main():
             max_train_samples = min(len(train_dataset), data_args.max_train_samples)
             train_dataset = train_dataset.select(range(max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
-            train_dataset = InputOutputTrainDataset(train_dataset,
-                                                    tokenizer,
-                                                    data_args.preprocessing_num_workers,
-                                                    data_args.max_source_length,
-                                                    data_args.max_target_length
-                            )
+            # train_dataset = InputOutputTrainDataset(train_dataset,
+            #                                         tokenizer,
+            #                                         data_args.preprocessing_num_workers,
+            #                                         data_args.max_source_length,
+            #                                         data_args.max_target_length)
+            train_dataset = preprocess_dataset_with_model(model_args.model_name,
+                                                          train_dataset,
+                                                          tokenizer,
+                                                          data_args) 
         # print_dataset_example(train_dataset[0], tokenizer)
         
     if training_args.do_eval:
