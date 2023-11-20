@@ -128,8 +128,8 @@ def main():
                                          model_args.model_name, 
                                          model_args.pre_seq_len,
                                          model_args.prefix_token_dim,
-                                         model_args.prefix_num_attention_heads
-                )
+                                         model_args.prefix_num_attention_heads)
+      
         model.print_trainable_parameters()
     elif model_args.lora:
         # lora
@@ -139,7 +139,6 @@ def main():
                                model_args.lora_rank,
                                model_args.lora_dropout
                 )
-        model = model.float()
         model.print_trainable_parameters()
     else:
         # Finetune
@@ -223,8 +222,7 @@ def main():
         data_collator=data_collator,
         compute_metrics=partial(compute_metrics, tokenizer=tokenizer, data_args=data_args) \
             if training_args.predict_with_generate else None,
-        save_changed=model_args.pre_seq_len is not None
-    )
+        save_changed=model_args.pre_seq_len is not None)
 
     # Training
     if training_args.do_train:

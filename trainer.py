@@ -36,11 +36,11 @@ class PrefixTrainer(Trainer):
         super().__init__(*args, **kwargs)
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
-        # breakpoint()
         # If we are executing this function, we are the process zero, so we don't check for that.
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Saving model checkpoint to {output_dir}")
+        breakpoint()
         # Save a trained model and configuration using `save_pretrained()`.
         # They can then be reloaded using `from_pretrained()`
         if not isinstance(self.model, PreTrainedModel):
@@ -49,9 +49,8 @@ class PrefixTrainer(Trainer):
                     state_dict = self.model.state_dict()
                 unwrap_model(self.model).save_pretrained(output_dir, state_dict=state_dict)
             elif isinstance(self.model, PeftModel):
-                if self.save_changed:
-                    logger.info(f"Saving PrefixEncoder to {output_dir}")
-                    self.model.save_pretrained(output_dir)
+                logger.info(f"Saving PeftModel to {output_dir}")
+                self.model.save_pretrained(output_dir)
             else:
                 logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
                 if state_dict is None:

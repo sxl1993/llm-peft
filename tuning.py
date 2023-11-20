@@ -171,15 +171,13 @@ class PeftModelForChatGLM(PeftModelForCausalLM):
         
 
 def get_prefix_tuning2_model(model, model_name, pre_seq_len, token_dim, num_attention_heads):
-    if model_name == "chatglm2-6b":
-        config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM,
-                                    num_virtual_tokens=pre_seq_len,
-                                    token_dim=token_dim,
-                                    num_attention_heads=num_attention_heads,
-                                    inference_mode=False
-                )
-        model = PeftModelForChatGLM(model, config)
-    
+    config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM,
+                                num_virtual_tokens=pre_seq_len,
+                                token_dim=token_dim,
+                                num_attention_heads=num_attention_heads,
+                                inference_mode=False)
+    if model_name not in ["chatglm2-6b", "chatglm3-6b"]:
+        model = get_peft_model(model, config)    
     return model
     
 def get_lora_model(model, model_name, target_modules, lora_rank, lora_dropout):
@@ -189,11 +187,7 @@ def get_lora_model(model, model_name, target_modules, lora_rank, lora_dropout):
                         target_modules=target_modules,
                         inference_mode=False,
                         r=lora_rank,
-                        lora_dropout=lora_dropout,
-            )
-    if model_name == "chatglm2-6b":
-        model = PeftModelForChatGLM(model, config)
-    
+                        lora_dropout=lora_dropout)
     model = get_peft_model(model, config)
     return model
 
